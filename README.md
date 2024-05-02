@@ -1,3 +1,5 @@
 ## Como rodar o projeto?
 
-`make run`
+```
+make run
+```
