@@ -1,47 +1,48 @@
 package internal
 
-import "sync"
-
-type Task interface {
-	Process()
+type Job struct {
+	Adapter Adapter
+	Index   int
 }
 
 type WorkerPool struct {
-	Tasks       []Task
+	Jobs        []Job
 	Concurrency int
-	Channel     chan Task
-	Wg          sync.WaitGroup
+	JobChan     chan Job
+	DoneChan    chan struct{}
 }
 
-func NewWorkerPool(tasks []Task, concurrency int) *WorkerPool {
+func NewWorkerPool(jobs []Job, concurrency int) *WorkerPool {
 	return &WorkerPool{
-		Tasks:       tasks,
+		Jobs:        jobs,
 		Concurrency: concurrency,
+		JobChan:     make(chan Job, len(jobs)),
+		DoneChan:    make(chan struct{}),
 	}
 }
 
 func (wp *WorkerPool) worker() {
-	for task := range wp.Channel {
-		task.Process()
+	for job := range wp.JobChan {
+		job.Adapter.Upload(job.Index)
 	}
 
-	defer wp.Wg.Done()
+	wp.DoneChan <- struct{}{}
 }
 
 func (wp *WorkerPool) Run() {
-	wp.Channel = make(chan Task)
-
-	wp.Wg.Add(wp.Concurrency)
-
 	for i := 0; i < wp.Concurrency; i++ {
 		go wp.worker()
 	}
 
-	for _, task := range wp.Tasks {
-		wp.Channel <- task
+	for _, job := range wp.Jobs {
+		wp.JobChan <- job
 	}
 
-	close(wp.Channel)
+	close(wp.JobChan)
 
-	wp.Wg.Wait()
+	for i := 0; i < wp.Concurrency; i++ {
+		<-wp.DoneChan
+	}
+
+	close(wp.DoneChan)
 }

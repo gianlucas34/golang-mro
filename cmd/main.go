@@ -8,21 +8,15 @@ import (
 )
 
 func main() {
-	fmt.Printf("Execução iniciada...")
+	fmt.Printf("Execution started...")
 
 	start := time.Now()
-	tasks := make([]internal.Task, 0)
+	handler := internal.NewHandler()
 
-	for i := 0; i < 800; i++ {
-		tasks = append(tasks, internal.NewRequestTask())
-	}
-
-	wp := internal.NewWorkerPool(tasks, 20)
-
-	wp.Run()
+	handler.Handle()
 
 	end := time.Now()
 	execTime := end.Sub(start)
 
-	fmt.Printf("\nExecução finalizada em: %v", execTime)
+	fmt.Printf("\nExecution completed in: %v", execTime)
 }
